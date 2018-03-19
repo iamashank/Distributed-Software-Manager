@@ -86,6 +86,7 @@ class Client:
 				_thread.start_new_thread(self.replyHandler,(conn, address))
 
 		except Exception as e:
+			print(e)
 			print("Network successfully checked for the package.")
 
 		sock.close()

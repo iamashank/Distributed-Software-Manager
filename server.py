@@ -38,10 +38,11 @@ class Server:
 
 		# global CWD
 		sock = socket.socket()
-		sock.connect((addr[0], 22653))
 		data = data.decode(encoding='ascii', errors='ignore')
 		if(data[0]!='?'):
+			sock.connect((addr[0], 22653))
 			sock.send("Incorrect message format".encode())
+			sock.close()
 		else:
 			data = data[1:]
 			res = "" 
@@ -52,14 +53,14 @@ class Server:
 						name, version = i.split()
 						if(name == data):
 							print("Sent version :", version)
-							sock.send(version.encode(), addr)
+							sock.connect((addr[0], 22653))
+							sock.send(version.encode())
+							sock.close()
 							break
 					except Exception as e:
-						print(e)
 						pass
 			except Exception as e:
 				package.packageListGenerator(self.CWD)
-				print(e)
 				pass
 
 	def _main(self):
