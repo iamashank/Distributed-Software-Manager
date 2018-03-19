@@ -48,11 +48,15 @@ class Server:
 			try:
 				l = open(self.CWD+'/packages.conf','r').readlines()
 				for i in l:
-					name, version = i.split()
-					if(name == data):
-						print("Sent version :", version)
-						sock.sendto(version.encode(), addr)
-						break
+					try:
+						name, version = i.split()
+						if(name == data):
+							print("Sent version :", version)
+							sock.sendto(version.encode(), addr)
+							break
+					except Exception as e:
+						print(e)
+						pass
 			except Exception as e:
 				package.packageListGenerator(self.CWD)
 				print(e)

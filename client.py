@@ -105,4 +105,13 @@ class Client:
 			sourcesFile.close()
 
 if __name__ == '__main__':
-	Client(sys.argv[1:])
+	try:
+		if sys.argv[1] == 'install':
+			Client(sys.argv[2:])
+		elif sys.argv[1] == 'remove':
+			for i in range(2, len(sys.argv)):
+				os.system('apt-get remove %s' % sys.argv[i])
+		else:
+			print('Invalid command')
+	except:
+		print('Required command missing')
