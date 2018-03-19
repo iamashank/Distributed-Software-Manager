@@ -1,7 +1,19 @@
-import sys, os, socket, package
+import sys, os, socket, package, subprocess, _thread
 from functools import cmp_to_key
 
 class Client:
+
+	def getAddressList(self):
+		l = subprocess.check_output(['ifconfig']).decode(encoding='ascii', errors='ignore').split('\n\n')
+		ret = []
+		for interface in l:
+			if(len(interface.split('HWaddr'))==2):
+				try:
+					ret.append(interface.split('Bcast:')[1].split()[0])
+				except:
+					pass
+
+		return ret
 
 	def cmp(self, a, b):
 		a = a[1].split('.')
@@ -21,83 +33,111 @@ class Client:
 		
 		if len(message) == 0:
 			print('Compulsory argument <package name> missing')
-			exit()
+			exit(1)
 
 		try:
 			for i in range(len(message)):
+				self.CWD = os.getcwd()
+				self.versionList = []
 				self._main(message[i])
 		except Exception as e:
 			print(e)
 			exit()
-		self.CWD = os.getcwd()
 		os.chdir('/var/cache/apt/archives')
-		os.system('dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz') 
+		print("Updating your packages list for distribution.")
+		FNULL = open(os.devnull, 'w')
+		subprocess.call("dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz", stdout=FNULL, stderr=FNULL, shell=True)
 		package.packageListGenerator(self.CWD)
+		print("Completed.")
 
-
-	def _main(self, message):
-
-		message = '?' + message
+	def broadcast(self, broadcast_addr, message):
 
 		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		server_address = ('192.168.43.255', 10000)
 
-		print('Broadcast: ', message)
+		server_address = (broadcast_addr, 10000)
+
+		print('Broadcasted to <'+broadcast_addr+'>: ', message)
 
 		sent = sock.sendto(message.encode(), server_address)
 
 		sock.close()
 
-		# latestVersion = '0.0.0'
-		# localRepo = ''
-		versionList = []
+		self.threadCount -= 1
 
-		print('Searching in Local Network...')
-
-		sock1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		sock1.settimeout(5)
+	def listen(self):
+		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		sock.settimeout(5)
 
 		server_address = ('', 22653)
 
-		sock1.bind(server_address)
+		sock.bind(server_address)
 
 		try:
 			while True:
-				data, address = sock1.recvfrom(1000000)
+				data, address = sock.recvfrom(1000000)
 				data = data.decode()
-				print("Received:",data)
-				versionList.append((address[0], data))
+				print("Received: ",end="")
+				print(data,end=" ")
+				print("From: ", end="")
+				print(address[0])
+				self.versionList.append((address[0], data))
 
 		except Exception as e:
-			print(e)
-		versionList.sort(key = cmp_to_key(self.cmp), reverse = True)
+			print("Network successfully checked for the package.")
 
-		if len(versionList) != 0:
-			print("Latest available version:", versionList[-1][1])
+		self.threadCount -= 1
+
+	def _main(self, message):
+
+		message = '?' + message
+		baddr_list = self.getAddressList()
+
+		print('Searching in Local Network...')
+
+		# latestVersion = '0.0.0'
+		# localRepo = ''
+		self.versionList = []
+		
+		_thread.start_new_thread(self.listen, ())
+		self.threadCount = 1
+		for i in baddr_list:
+			self.threadCount += 1 #Warning. Keep this line before anything else
+			_thread.start_new_thread(self.broadcast, (i, message))
+
+		while self.threadCount!=0:
+			pass
+		
+		self.versionList.sort(key = cmp_to_key(self.cmp), reverse = True)
+
+		if len(self.versionList) != 0:
+			print("Latest available version:", self.versionList[-1][1])
 			sourcesFile = open('/etc/apt/sources.list', 'r+')
 			sourcesLine = sourcesFile.readlines()
 			newRepoString = ''
-			for version in versionList:
+			for version in self.versionList:
 				newRepoString += ('deb http://%s:35622/ ./\n' % version[0])
-			print ("Adding repo(s) : ", newRepoString)
+			print("Adding repo(s) : ", newRepoString)
 			newRepo = [newRepoString]
-			# newRepo = [ 'deb http://%s:35622/ ./\n' % localRepo ]
 			finalSourcesLines = newRepo + sourcesLine
 			sourcesFile.seek(0)
 			sourcesFile.writelines(finalSourcesLines)
 			sourcesFile.truncate()
 			sourcesFile.close()
-			os.system('apt-get update')
+			print("Running APT repositories list update.")
+			FNULL = open(os.devnull, 'w')
+			subprocess.call("apt-get update", stdout=FNULL, stderr=FNULL, shell=True)
+			print("APT repository list update complete.")
+
 		else:
 			 print('File not found locally...\nDownloading from the Internet')
 
 		os.system('apt-get install %s --allow-unauthenticated' % message[1:])
 
-		if len(versionList) != 0:
+		if len(self.versionList) != 0:
 			sourcesFile = open('/etc/apt/sources.list', 'r+')
 			sourcesLine = sourcesFile.readlines()
-			for i in range(0, len(versionList)):
+			for i in range(0, len(self.versionList)):
 				del sourcesLine[0]
 			sourcesFile.seek(0)
 			sourcesFile.writelines(sourcesLine)
