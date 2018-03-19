@@ -16,14 +16,16 @@ def packageListGenerator(CWD):
 		try:
 			name = i.split('\n')[0]
 			version = i.split('Version: ')[1].split('\n')[0].split('-')[0].split('+')[0].replace(':','.').split()
+			version = ''.join(version)
 			for j in range(len(version)):
 				if((version[j]<'0' or version[j]>'9') and version[j]!='.'):
-					del version[j]
-			version = ''.join(version)
+					version = version[:j]
+					break
 			if(version==""):
 				version = "0.0.0.1"
 			f.write(name+" "+version+"\n")
-		except:
+		except Exception as e:
+			print(e)
 			pass
 
 	f.close()
