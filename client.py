@@ -1,4 +1,4 @@
-import sys, os, socket, package, subprocess, _thread
+import sys, os, socket, package, subprocess, _thread, time
 from functools import cmp_to_key
 
 class Client:
@@ -65,27 +65,30 @@ class Client:
 
 		self.threadCount -= 1
 
+	def replyHandler(self, conn, address):
+		data = conn.recv(1000000)
+		data = data.decode()
+		print("Received: ",end="")
+		print(data,end=" ")
+		print("From: ", end="")
+		print(address[0])
+		self.versionList.append((address[0], data))
+
 	def listen(self):
-		sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		sock = socket.socket()
 		sock.settimeout(5)
-
-		server_address = ('', 22653)
-
-		sock.bind(server_address)
-
+		sock.bind(('', 22653))
+		sock.listen(100)
+		print("Listening for replies..")
 		try:
 			while True:
-				data, address = sock.recvfrom(1000000)
-				data = data.decode()
-				print("Received: ",end="")
-				print(data,end=" ")
-				print("From: ", end="")
-				print(address[0])
-				self.versionList.append((address[0], data))
+				conn, address = sock.accept()     
+				_thread.start_new_thread(self.replyHandler,(conn, address))
 
 		except Exception as e:
 			print("Network successfully checked for the package.")
 
+		sock.close()
 		self.threadCount -= 1
 
 	def _main(self, message):
@@ -100,6 +103,7 @@ class Client:
 		self.versionList = []
 		
 		_thread.start_new_thread(self.listen, ())
+		time.sleep(1)
 		self.threadCount = 1
 		for i in baddr_list:
 			self.threadCount += 1 #Warning. Keep this line before anything else

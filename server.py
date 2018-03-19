@@ -37,13 +37,13 @@ class Server:
 	def handle_requests(self, data, addr, sock):
 
 		# global CWD
-
+		sock = socket.socket()
+		sock.connect((addr[0], 22653))
 		data = data.decode(encoding='ascii', errors='ignore')
 		if(data[0]!='?'):
-			sock.sendto("Incorrect message format".encode(), addr)
+			sock.send("Incorrect message format".encode())
 		else:
 			data = data[1:]
-			addr = (addr[0], 22653)
 			res = "" 
 			try:
 				l = open(self.CWD+'/packages.conf','r').readlines()
@@ -51,7 +51,7 @@ class Server:
 					name, version = i.split()
 					if(name == data):
 						print("Sent version :", version)
-						sock.sendto(version.encode(), addr)
+						sock.send(version.encode())
 						break
 			except Exception as e:
 				package.packageListGenerator(self.CWD)
