@@ -1,0 +1,25 @@
+#Installation
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo apt-get update
+
+sudo apt-get install -y docker-ce
+
+sudo usermod -aG docker ${USER}
+
+su - ${USER}
+
+
+#Setup
+
+docker build -t rajasthan .
+
+docker run --net=host --name rajhack -d rajasthan
+
+#Access
+
+ssh root@localhost 
+password: 12345 
+
+rm /etc/apt/apt.conf.d/docker-clean
