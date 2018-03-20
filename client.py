@@ -1,6 +1,8 @@
 import sys, os, socket, package, subprocess, _thread, time, requests
 from functools import cmp_to_key
 
+currentDir = os.getcwd();
+
 class Client:
 
 	def getAddressList(self):
@@ -218,6 +220,18 @@ if __name__ == '__main__':
 		elif sys.argv[1] == 'remove':
 			for i in range(2, len(sys.argv)):
 				os.system('apt-get remove %s' % sys.argv[i])
+		elif sys.argv[1] == 'store':
+			print ('Copying install files...')
+			os.system('test -d %s/debFiles || mkdir -p %s/debFiles && cp /var/cache/apt/archives/* %s/debFiles' % (sys.argv[2], sys.argv[2], sys.argv[2]))
+		elif sys.argv[1] == 'load':
+			print ('Copying install files...\n')
+			os.system('test -d %s/debFiles || mkdir -p %s/debFiles && cp %s/debFiles/* /var/cache/apt/archives/' % (sys.argv[2], sys.argv[2], sys.argv[2]))
+			print ("Updating package list...\n")
+			os.chdir('/var/cache/apt/archives')
+			os.system("dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz")
+			os.system("apt-get update")
+			os.chdir(currentDir)
+			package.packageListGenerator(os.getcwd())
 		else:
 			print('Invalid command')
 	except:
