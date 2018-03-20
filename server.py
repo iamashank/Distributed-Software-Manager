@@ -18,14 +18,16 @@ class Server:
 			Handler = http.server.SimpleHTTPRequestHandler
 			httpd = socketserver.TCPServer(("", PORT), Handler)
 			httpd.serve_forever()
-			print("Serving repo at port", PORT)
+			# print("Serving repo at port", PORT)
 		except:
+			self.repo_server_failure = True
 			print('Port is already in use. Cannot start Repository Server.')
-			repo_server_failure = True
 
 
 	def setupRepo(self):
-		print(os.getcwd())
+		# print(os.getcwd())
+		FNULL = open(os.devnull, 'w')
+		subprocess.call("apt-get install net-tools", stdout=FNULL, stderr=FNULL, shell=True)
 		Client(['dpkg-dev'])
 		# os.system("apt-get install dpkg-dev")
 		os.system("dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz")
