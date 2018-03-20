@@ -1,6 +1,6 @@
-# Distributed-Package-Manager
+# Distributed-Software-Manager
 
-DPM is an installer that can install softwares downloaded from a distributed network. Each computer on a network acts as a Server that listens to software packages requests and replies if the software is available with it. Each client broadcast to check for the availability of package in the Local Network before downloading the packages from the Internet.
+DSM is an installer that can install softwares downloaded from a distributed network. Each computer on a network acts as a Server that listens to software packages requests and replies if the software is available with it. Each client broadcast to check for the availability of package in the Local Network before downloading the packages from the Internet.
 
 ## Features:
 
