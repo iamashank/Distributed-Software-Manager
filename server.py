@@ -65,7 +65,6 @@ class Server:
 						pass
 				if not found:
 					try:
-						print("fdvsdvf")
 						f = open('/var/cache/apt/archives/current_downloads.conf','r')
 						if(f.read()==data):
 							print("Currently downloading that file..")

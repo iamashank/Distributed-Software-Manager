@@ -130,7 +130,7 @@ class Client:
 			print("Someone is already downloading the latest packages..")
 			wait = 1
 			download_complete = False
-			while wait<=10:
+			while wait<=100:
 				time.sleep(wait)
 				res = dict()
 				try:
@@ -139,7 +139,7 @@ class Client:
 					print(e)
 					pass
 
-				print(res.text)
+				print("Wait "+str(wait))
 				
 				if res.status_code!=200 or res.text!=message[1:]:
 					download_complete = True
@@ -199,9 +199,9 @@ class Client:
 
 
 		os.system('apt-get install %s --allow-unauthenticated' % message[1:])
-		#f = open('/var/cache/apt/archives/current_downloads.conf','w')
-		#f.write("")
-		#f.close()
+		f = open('/var/cache/apt/archives/current_downloads.conf','w')
+		f.write("")
+		f.close()
 
 		if len(self.versionList) != 0:
 			sourcesFile = open('/etc/apt/sources.list', 'r+')
