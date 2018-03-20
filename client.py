@@ -1,4 +1,4 @@
-import sys, os, socket, package, subprocess, _thread, time
+import sys, os, socket, package, subprocess, _thread, time, requests
 from functools import cmp_to_key
 
 class Client:
@@ -39,6 +39,7 @@ class Client:
 			for i in range(len(message)):
 				self.CWD = os.getcwd()
 				self.versionList = []
+				self.downloadingList = []
 				self._main(message[i])
 		except Exception as e:
 			print(e)
@@ -72,7 +73,10 @@ class Client:
 		print(data,end=" ")
 		print("From: ", end="")
 		print(address[0])
-		self.versionList.append((address[0], data))
+		if(data[0]=='H'):
+			self.versionList.append((address[0], data[2:]))
+		else:
+			self.downloadingList.append((address[0], data[2:]))
 
 	def listen(self):
 		sock = socket.socket()
@@ -102,6 +106,7 @@ class Client:
 		# latestVersion = '0.0.0'
 		# localRepo = ''
 		self.versionList = []
+		self.downloadingList = []
 		
 		_thread.start_new_thread(self.listen, ())
 		time.sleep(1)
@@ -115,13 +120,61 @@ class Client:
 		
 		self.versionList.sort(key = cmp_to_key(self.cmp), reverse = True)
 
-		if len(self.versionList) != 0:
-			print("Latest available version:", self.versionList[-1][1])
+		apt_preperation_complete = False
+
+		lines_modified = 0
+
+		if len(self.downloadingList) != 0:
+			print("Someone is already downloading the latest packages..")
+			wait = 1
+			download_complete = False
+			while wait<=10:
+				time.sleep(wait)
+				res = dict()
+				try:
+					res = requests.get("http://"+str(self.downloadingList[0][0])+":35622/current_downloads.conf")
+				except Exception as e:
+					print(e)
+					pass
+
+				print(res.text)
+				
+				if res.status_code!=200 or res.text!=message[1:]:
+					download_complete = True
+					break
+
+				wait *= 2
+
+			if download_complete:
+				print("Latest downloaded version:", self.downloadingList[0][1])
+				sourcesFile = open('/etc/apt/sources.list', 'r+')
+				sourcesLine = sourcesFile.readlines()
+				newRepoString = ''
+				for version in self.downloadingList:
+					newRepoString += ('deb http://%s:35622/ ./\n' % version[0])
+					lines_modified += 1
+				print("Adding repo(s) : ", newRepoString)
+				newRepo = [newRepoString]
+				finalSourcesLines = newRepo + sourcesLine
+				sourcesFile.seek(0)
+				sourcesFile.writelines(finalSourcesLines)
+				sourcesFile.truncate()
+				sourcesFile.close()
+				print("Running APT repositories list update.")
+				FNULL = open(os.devnull, 'w')
+				subprocess.call("apt-get update", stdout=FNULL, stderr=FNULL, shell=True)
+				print("APT repository list update complete.")
+				apt_preperation_complete = True
+
+
+		if len(self.versionList) != 0 and apt_preperation_complete==False:
+			print("Latest available version:", self.versionList[0][1])
 			sourcesFile = open('/etc/apt/sources.list', 'r+')
 			sourcesLine = sourcesFile.readlines()
 			newRepoString = ''
 			for version in self.versionList:
 				newRepoString += ('deb http://%s:35622/ ./\n' % version[0])
+				lines_modified += 1
 			print("Adding repo(s) : ", newRepoString)
 			newRepo = [newRepoString]
 			finalSourcesLines = newRepo + sourcesLine
@@ -133,16 +186,25 @@ class Client:
 			FNULL = open(os.devnull, 'w')
 			subprocess.call("apt-get update", stdout=FNULL, stderr=FNULL, shell=True)
 			print("APT repository list update complete.")
+			apt_preperation_complete = True
 
-		else:
-			 print('File not found locally...\nDownloading from the Internet')
+		if apt_preperation_complete==False:
+			print('File not found locally...\nDownloading from the Internet')
+			f = open('/var/cache/apt/archives/current_downloads.conf','w')
+			f.write(message[1:])
+			f.close()
+
+
 
 		os.system('apt-get install %s --allow-unauthenticated' % message[1:])
+		#f = open('/var/cache/apt/archives/current_downloads.conf','w')
+		#f.write("")
+		#f.close()
 
 		if len(self.versionList) != 0:
 			sourcesFile = open('/etc/apt/sources.list', 'r+')
 			sourcesLine = sourcesFile.readlines()
-			for i in range(0, len(self.versionList)):
+			for i in range(0, lines_modified):
 				del sourcesLine[0]
 			sourcesFile.seek(0)
 			sourcesFile.writelines(sourcesLine)

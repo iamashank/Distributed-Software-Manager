@@ -50,15 +50,30 @@ class Server:
 			res = "" 
 			try:
 				l = open(self.CWD+'/packages.conf','r').readlines()
+				found = False
 				for i in l:
 					try:
 						name, version = i.split()
 						if(name == data):
 							print("Sent version :", version)
 							sock.connect((addr[0], 22653))
-							sock.send(version.encode())
+							sock.send(("H:"+version).encode())
 							sock.close()
+							found = True
 							break
+					except Exception as e:
+						pass
+				if not found:
+					try:
+						print("fdvsdvf")
+						f = open('/var/cache/apt/archives/current_downloads.conf','r')
+						if(f.read()==data):
+							print("Currently downloading that file..")
+							print("Sent version :", version)
+							sock.connect((addr[0], 22653))
+							sock.send(("D:"+version).encode())
+							sock.close()
+						f.close()
 					except Exception as e:
 						pass
 			except Exception as e:
